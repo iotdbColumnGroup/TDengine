@@ -60,7 +60,8 @@ int tsdbInitCommitQueue() {
   pthread_mutex_init(&(pQueue->lock), NULL);
   pthread_cond_init(&(pQueue->queueNotEmpty), NULL);
 
-  for (int i = 0; i < nthreads; i++) {
+  // set thread number to 1 for debugging
+  for (int i = 0; i < 1; i++) {
     pthread_create(pQueue->threads + i, NULL, tsdbLoopCommit, NULL);
   }
 

@@ -1282,6 +1282,54 @@ static int tsdbCommitMemData(SCommitH *pCommith, SCommitIter *pIter, TSKEY keyLi
 
     if (pCommith->pDataCols->numOfRows <= 0) break;
 
+    // print all pCols data 
+    int printRowNum = 100; 
+    SDataCols *pCols = pCommith->pDataCols;
+    if (pCols->numOfRows > printRowNum) {
+      long *timestamps = (long *)malloc(sizeof(long)*(pCols->numOfRows));
+      float **dataColumns = (float **)malloc(pCols->numOfCols * sizeof(float *)-1);
+      int *columnSchemaIdx = (int *)malloc(pCols->numOfCols * sizeof(int));
+      int columnNum = 0;
+      for (int dcol = 0; dcol < pCols->numOfCols; dcol++) {
+        SDataCol *pDataCol = &(pCols->cols[dcol]);
+        if (pDataCol->bytes == sizeof(TSKEY)) {
+          // fetch timestamp data          
+          for (int idx = 0; idx < pCols->numOfRows; idx++) {
+            timestamps[idx] = ((long *)(pDataCol->pData))[idx] / 1000;
+          }
+        } else {
+          if (pDataCol->pData == NULL) {
+            continue;
+          } else {
+            columnSchemaIdx[columnNum] = dcol;
+            // create float array
+            dataColumns[columnNum] = (float *)malloc(sizeof(float)*(pCols->numOfRows));
+            // fetch float data          
+            for (int idx = 0; idx < pCols->numOfRows; idx++) {
+              dataColumns[columnNum][idx] = ((float *)(pDataCol->pData))[idx];
+            }
+            columnNum++;
+          }
+        }
+      }
+      //   tsdbInfo("timestamp: %"PRId64 , timestamps[idx]);
+      // perform grouping algorithm
+      grouping(timestamps, dataColumns, pCols->numOfRows, columnNum, columnSchemaIdx);
+      
+      // perform appr grouping algorithm
+      groupingAppr(timestamps, dataColumns, pCols->numOfRows, columnNum, columnSchemaIdx);
+
+      // free memory 
+      for (int dcol = 0; dcol < columnNum; dcol++ ) {
+        free(dataColumns[dcol]);
+      }
+      free(dataColumns);
+      free(timestamps);
+    }
+    
+    // tsdbInfo("vgId:%d start to commit! keyFirst %" PRId64 " keyLast %" PRId64 " numOfRows %" PRId64 " meta rows: %d",
+    //       REPO_ID(pRepo), pMem->keyFirst, pMem->keyLast, pMem->numOfRows, listNEles(pMem->actList));
+
     if (toData || pCommith->pDataCols->numOfRows >= pCfg->minRowsPerFileBlock) {
       pDFile = TSDB_COMMIT_DATA_FILE(pCommith);
       isLast = false;

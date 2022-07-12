@@ -41,6 +41,8 @@
 #include "tarray.h"
 #include "tfs.h"
 #include "tsocket.h"
+#include "tsdbGroupEngine.h"
+#include "tsdbGroupApprEngine.h"
 
 #include "tsdb.h"
 
